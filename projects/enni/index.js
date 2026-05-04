@@ -60,6 +60,8 @@ async function pool2(api) {
 module.exports = {
   methodology:
     "TVL counts WETH collateral in CDP contracts, USDC/USDT reserves in DirectMint, ZCHF reserves in DirectMintGeneric, and enUSD/enCHF deposited in Savings. ENNI staked in MasterChef (including via Vault) is counted as staking. ENNI-USDC LP in MasterChef is counted as pool2.",
+  deadFrom: '2026-05-04',
+  hallmarks: [['2026-05-04', 'Protocol deprecated']],
   ethereum: {
     tvl,
     staking,
