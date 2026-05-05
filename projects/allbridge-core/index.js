@@ -22,7 +22,10 @@ const suiTvl = async (api) => {
       sharedObjects: [{ objectId: bridgeId, initialSharedVersion, mutable: false }],
     });
     const inspection = await sui.devInspectTransactionBlock(txBytes);
-    const [balanceBytes] = inspection.results.pop().returnValues.pop();
+    const balanceBytes = inspection?.results?.[0]?.returnValues?.[0]?.[0];
+    if (!Array.isArray(balanceBytes) || balanceBytes.length !== 8) {
+      throw new Error(`Unexpected pool_balance return for ${tokenAddress}: ${JSON.stringify(inspection?.results)}`);
+    }
     api.add(tokenAddress, sui.fromU64(balanceBytes).toString());
   }
 }
