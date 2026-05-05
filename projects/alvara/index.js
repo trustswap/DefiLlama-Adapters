@@ -12,14 +12,17 @@ const CONFIG = {
     }
 }
 
-async function tvl(api) {
+async function getBsktPairs(api) {
     const cfg = CONFIG[api.chain]
-
     const [logsNew, logsOld] = await Promise.all([
         getLogs2({ api, eventAbi: basketCreatedAbi,    target: cfg.factory, fromBlock: cfg.fromBlock, extraKey: 'BSKTCreated-new' }),
         getLogs2({ api, eventAbi: basketCreatedAbiOld, target: cfg.factory, fromBlock: cfg.fromBlock, extraKey: 'BSKTCreated-old' }),
     ])
-    const bsktPairs = [...logsNew, ...logsOld].map(l => l.bsktPair)
+    return [...logsNew, ...logsOld].map(l => l.bsktPair)
+}
+
+async function tvl(api) {
+    const bsktPairs = await getBsktPairs(api)
     if (!bsktPairs.length) return
 
     const tokensPerPair = await api.multiCall({
@@ -37,7 +40,13 @@ async function tvl(api) {
     return sumTokens2({ api, tokensAndOwners, blacklistedTokens: [ALVA] })
 }
 
+async function staking(api) {
+    const bsktPairs = await getBsktPairs(api)
+    if (!bsktPairs.length) return
+    return sumTokens2({ api, tokens: [ALVA], owners: bsktPairs })
+}
+
 module.exports = {
-    methodology: 'TVL counts the underlying tokens held in every Alvara basket pair contract deployed by the BSKT factory.',
-    ethereum: { tvl }
+    methodology: 'TVL counts the underlying tokens held in every Alvara basket pair contract deployed by the BSKT factory. Baskets are discovered via BSKTCreated events (factory has been upgraded once, so both event variants are scanned). The protocol\'s own ALVA governance token is excluded from TVL and reported under staking.',
+    ethereum: { tvl, staking }
 }

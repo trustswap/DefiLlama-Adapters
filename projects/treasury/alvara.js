@@ -1,4 +1,4 @@
-const { nullAddress, treasuryExports } = require("../helper/treasury");
+const { treasuryExports } = require("../helper/treasury");
 
 const treasury = "0x689ac37b02a36e77d2ad1ea7d923a05233a0d8e2";
 
