@@ -143,6 +143,7 @@ const ADDRESSES = {
     TermMax4626Factory: [
       { address: "0xD594eb03a43b4974Aa7B32b5740cdeCe961151Fa", fromBlock: 23489745 },
       { address: "0x3Cc88086C0a613970565C96F9a1b6BdAd61C5f14", fromBlock: 24790495 },
+      { address: "0x8ec01a807D088845e5176c20A129ebF9A0101dD5", fromBlock: 25004529 },
     ],
     FactoryV2: [
       {
