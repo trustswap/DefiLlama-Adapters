@@ -62,6 +62,11 @@ const NAWA_ZIG_VAULT = 'zig1fqxfjv54zavyr9464vj6n2jgw9fxgdnxucf866spedunntw0skcs
 // Valdora Staker contract used as pricing oracle for stZIG → uZIG
 const VALDORA_STAKER_CONTRACT = 'zig18nnde5tpn76xj3wm53n0tmuf3q06nruj3p6kdemcllzxqwzkpqzqk7ue55';
 
+// Nawa USDC vault. Funds deposited here are forwarded off-chain to Zignaly
+// and bridged to ETH/BSC for a private credit strategy, so the only on-chain
+// handle on TVL is the vault's oracle-reported AUM (in USDC base units, 6 dp).
+const NAWA_USDC_VAULT = 'zig1fn4rrr5knlg93nf3wyme9fzmgve3fftxu5l7wv90llp77mwg7ctq2lfwtd';
+
 /**
  * Fetch TVL (AUM) from the Nawa Zig vault using:
  *   QueryMsg::TotalAum {}
@@ -106,15 +111,31 @@ async function fetchUzigPerStzig() {
   return (probeUzig * 1_000_000n) / BigInt(stzig_amount);
 }
 
+/**
+ * Fetch AUM (in USDC base units, 6 decimals) from the Nawa USDC vault using:
+ *   QueryMsg::Aum {} -> { "aum": "<uint256>" }
+ */
+async function fetchUsdcVaultAum() {
+  const res = await queryContract({
+    contract: NAWA_USDC_VAULT,
+    chain: 'zigchain',
+    data: { aum: {} },
+  });
+
+  const amount = res.aum;
+  if (!amount || amount === '0') return null;
+  return BigInt(amount);
+}
+
 async function zigchainTvl(api) {
     const balances = api.getBalances();
-  
+
     try {
       const [aumStzig, ratioScaled] = await Promise.all([
         fetchZigVaultTVL(),
         fetchUzigPerStzig(),
       ]);
-  
+
       if (aumStzig && ratioScaled) {
         const uzigEq = (aumStzig * ratioScaled) / 1_000_000n;
         const key = 'zigchain:uzig';
@@ -124,7 +145,22 @@ async function zigchainTvl(api) {
     } catch (e) {
       // If Zig part fails, we just skip it so Core TVL still works
     }
-  
+
+    try {
+      const aumUsdc = await fetchUsdcVaultAum();
+      if (aumUsdc) {
+        // Funds are deployed cross-chain via Zignaly; tag as USD value
+        // rather than a chain-specific denom. Aum is in USDC base units
+        // (6 decimals); convert to a USD float for addCGToken.
+        const usdValue = Number(aumUsdc) / 1e6;
+        if (Number.isFinite(usdValue) && usdValue > 0) {
+          api.addCGToken('usd-coin', usdValue);
+        }
+      }
+    } catch (e) {
+      // If USDC vault query fails, skip it so the rest of TVL still works
+    }
+
     return transformBalances('zigchain', balances);
   }
   
@@ -136,8 +172,10 @@ module.exports = {
     'Core: TVL is calculated by 1) unwrapping Bitflux LP tokens held by Nawa Solv Vault V2 to their underlying assets ' +
     '(e.g. SolvBTC.CORE, WBTC, SolvBTC.b) based on pool reserves and total supply, and 2) tracking dualCore token ' +
     'holdings in the Core vault address. ' +
-    'ZigChain: TVL is the total AUM returned by the Nawa Zig vault (in stZIG) converted to uZIG equivalent via ' +
-    'Valdora’s reverse_st_zig_price oracle, then reported as uZIG on ZigChain.',
+    'ZigChain: TVL is the sum of (1) the Nawa Zig vault AUM (in stZIG) converted to uZIG equivalent via ' +
+    'Valdora’s reverse_st_zig_price oracle and reported as uZIG, and (2) the Nawa USDC vault AUM ' +
+    '(oracle-reported USD value of capital deployed off-chain via Zignaly into a cross-chain ' +
+    'private credit position), reported as USDC.',
   core: {
     tvl: coreTvl,
   },
