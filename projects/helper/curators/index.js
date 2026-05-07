@@ -443,6 +443,16 @@ async function getCuratorTvlBoringVault(api, vaults) {
   }
 }
 
+async function getCuratorTvlUpshiftV2(api, vaults) {
+  // Upshift multiAssetVault: non-ERC4626, exposes asset() + getTotalAssets()
+  await api.erc4626Sum({
+    calls: vaults,
+    tokenAbi: ABI.ERC4626.asset,
+    balanceAbi: 'uint256:getTotalAssets',
+    permitFailure: true,
+  })
+}
+
 async function getCuratorTvlSymbioticVault(api, vaults) {
   const assets = await api.multiCall({ abi: ABI.symbiotic.collateral, calls: vaults, permitFailure: true })
   const existedVaults = []
@@ -541,6 +551,11 @@ async function getCuratorTvl(api, vaults) {
   // symiotic.fi
   if (vaults.symbiotic) {
     await getCuratorTvlSymbioticVault(api, vaults.symbiotic)
+  }
+
+  // upshift.io multiAssetVault (V2)
+  if (vaults.upshiftV2) {
+    await getCuratorTvlUpshiftV2(api, vaults.upshiftV2)
   }
 
   // nested 4626 vaults
