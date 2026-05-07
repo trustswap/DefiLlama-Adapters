@@ -1,5 +1,6 @@
 const { getLogs2 } = require('../helper/cache/getLogs')
 
+// Test pools and empty pools that fail on totalAssets()
 const BLACKLIST = {
   avax: [
     '0xf5fd160c5037568d38969c0cf4be05f36a3f7560', // XEURC-LIQ-1
