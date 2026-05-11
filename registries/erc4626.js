@@ -279,6 +279,10 @@ const configs = {
   'xeno-money': {
     base: ['0xC6Aad7c41c66bDC5E138fbd4180cDd3dB0F4fB3F'],
     methodology: 'TVL is the total ISKe deposited in the sISKe ERC-4626 earn vault, measured via totalAssets().'
+  },
+  'gremlix': {
+    arbitrum: ['0x973Ae12aC9078E9f9B1708C477A9670bB3fB0886','0xd519EF317Be061b310D3caA4565Fa1ef466c36C8'],
+    methodology: 'TVL is the sum of total assets across all Gremlix ERC-4626 vaults.'
   }
 }
 
