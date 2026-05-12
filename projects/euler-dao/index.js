@@ -1,7 +1,13 @@
 const { getCuratorExport } = require("../helper/curators");
 
+// EulerDAO sunset dao managed vaults, and handed them off to AlphaGrowth 
+// (projects/alpha-growth/index.js) and K3 (projects/k3/index.js)
+// https://forum.euler.finance/t/sunsetting-of-dao-managed-market-and-vaults/1828
+const SUNSET = '2026-05-06';
+const SUNSET_TS = Math.floor(new Date(SUNSET).getTime() / 1000);
+
 const configs = {
-  methodology: 'Count all assets are deposited in all vaults curated by Euler DAO.',
+  methodology: `Count all assets deposited in vaults curated by Euler DAO. Sunset May 2026, vaults are now curated by AlphaGrowth and K3.`,
   blockchains: {
     ethereum: {
       eulerVaultOwners: [
@@ -43,4 +49,14 @@ const configs = {
   }
 }
 
-module.exports = getCuratorExport(configs)
+const adapter = getCuratorExport(configs);
+
+// Pre-sunset queries return historical TVL; post-sunset returns $0.
+for (const chain of Object.keys(configs.blockchains)) {
+  const original = adapter[chain].tvl;
+  adapter[chain].tvl = async (api) =>
+    api.timestamp && api.timestamp >= SUNSET_TS ? {} : original(api);
+}
+
+adapter.hallmarks = [[SUNSET, "Sunset vaults"]];
+module.exports = adapter;
