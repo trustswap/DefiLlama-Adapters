@@ -1,18 +1,21 @@
 const { sumTokens2 } = require('../helper/unwrapLPs')
-const { getLogs2 } = require('../helper/cache/getLogs')
 
-const eventAbi = 'event StrategyDeployed(address indexed strategy, address indexed token0, address indexed token1, uint24 fee, int24 tickLower, int24 tickUpper)';
-const config = { ethereum: {factory: '0xf24F99795D1Cb1F0816101D4e0A41a84b44ac8c3', fromBlock: 24988527} }
+const strategyCountAbi = 'uint:strategyCount';
+const strategiesAbi = 'function strategies(uint256) returns (address)';
+const getAllPoolsAbi = 'function getAllPoolsTVL() view returns ((address token, uint8 decimals, uint256 amount)[])';
+
+const config = { ethereum: {pm: '0xf24F99795D1Cb1F0816101D4e0A41a84b44ac8c3', poolInfo: '0x5072fF50B5ad5ED1Fe87b934cbFdB679394E1B1a'} };
 
 async function tvl(api) {
-  const {factory, fromBlock} = config[api.chain]
-  const logs = await getLogs2({api, eventAbi, factory, fromBlock})
-  const strategies = logs.map(s => s.strategy)
+  const {pm, poolInfo} = config[api.chain]
+  const strategies = await api.fetchList({ lengthAbi: strategyCountAbi, itemAbi: strategiesAbi, target: pm })
+  const pools = await api.call({ abi: getAllPoolsAbi, target: poolInfo })
+  const tokens = pools.map(p => p.token)
 
-  return sumTokens2({ api, owners: strategies, resolveUniV3: true })
+  return sumTokens2({ api, tokens, owners: [...strategies, pm], resolveUniV3: true })
 }
 
 module.exports = {
-  methodology: 'TVL is the value of all Uniswap v3 positions held by Altera strategy contracts.',
+  methodology: 'TVL is the value of tokens held by the PositionManager and all Uniswap v3 positions held by Altera strategy contracts.',
   ethereum: { tvl },
 }
